@@ -9,7 +9,6 @@ var sphere;
 var N = 100;  
 var clock = new THREE.Clock();
 var keyboard = new THREEx.KeyboardState();
-
 var mouse = { x: 0, y: 0 }; //переменная для хранения координат мыши
 //массив для объектов, проверяемых на пересечение с курсором
 var targetList = []; 
