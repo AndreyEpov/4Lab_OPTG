@@ -23,6 +23,7 @@ var objectList=[];
 var lastPos= new THREE.Vector3();
 var brVis = false;
 
+var objectList1=[];
 
 
 var models= new Map();
@@ -132,7 +133,8 @@ function animate()
     for (var i = 0; i < objectList.length; i++)
     {
         //var y = geometry.vertices[Math.round(z)+Math.round(x)*N].y;
-        objectList[i].position.y = mas.vertices[Math.round(objectList[i].position.z) + Math.round(objectList[i].position.x)*N].y+0.3 ;
+        //if(selected.userData!=)
+        objectList1[i].position.y = mas.vertices[Math.round(objectList1[i].position.z) + Math.round(objectList1[i].position.x)*N].y+0.3 ;
     }
     requestAnimationFrame( animate );
     render();
@@ -315,30 +317,44 @@ function addSky()
         }  
         else
         {
+            
             if ( intersects.length > 0 )
             {
+                
                 if(selected != null && lmb == true)
                 {
-                    //console.log("true");  
+               
+                    console.log("pos");
+                         
                     selected.position.copy(intersects[0].point);
                     selected.userData.box.setFromObject(selected);
-                    var pos = new THREE.Vector3();
+                    var pos = new THREE.Vector3();   
                     selected.userData.box.getCenter(pos);
                     selected.userData.obb.position.copy(pos); 
                     selected.userData.cube.position.copy(pos);
-
+                    
                     for (i=0;i < objectList.length;i++)
                     {
                         if(selected.userData.cube != objectList[i])
                         {
-                            objectList[i].userData.cube.material.visible = false;
-                          
+                            objectList[i].material.visible = false;
+                            objectList[i].material.color = {r:1, g:1, b:0}
 
-                            if(intersect(selected.userData,objectList[i].userData)==true)
+                            if(intersect(selected.userData,objectList[i].userData.model.userData)==true)
                             {
-                                objectList[i].userData.cube.material.color = {r:1, g:1, b:0}
-                                objectList[i].userData.cube.material.visible = true;
+                              
+                                
+                               
+                            
+                                selected.userData.box.getCenter(lastPos);
+                                selected.userData.obb.position.copy(lastPos); 
+                                selected.userData.cube.position.copy(lastPos);
+                                objectList[i].material.color = {r:0, g:1, b:0}
+                                objectList[i].material.visible = true;
+                                lastPos=pos;
+                                console.log("lastpos");
                             }
+
                         }
                     }
                 }
@@ -350,7 +366,6 @@ function addSky()
         if (brVis==true)
         {
             selected.userData.cube.material.visible = false;
-            
             //console.log(event.which);
             if (event.which == 1)
                 brushDirection = 1;
@@ -374,13 +389,13 @@ function addSky()
                 {
                     selected.userData.cube.material.visible = false;
 
-                    selected = intersects[0].object.parent;
-
+                    selected = intersects[0].object.userData.model;
+  
                     selected.userData.cube.material.visible = true;
                 
                 }else
                 {
-                    selected = intersects[0].object.parent;
+                    selected = intersects[0].object.userData.model;
                     selected.userData.cube.material.visible = true;
                   
                 }            
@@ -531,7 +546,6 @@ function loadModel(path, oname, mname,s,name)
                             }
                     } );
                     object.parent = object;
-               
                     var x = Math.random()*N;
                     var z = Math.random()*N;
                     var y = mas.vertices[Math.round(z)+Math.round(x)*N].y;
@@ -596,9 +610,12 @@ function addMesh(name)
         //получение матрицы поворота объекта
         obb.basis.extractRotation(model.matrixWorld);
         //структура хранится в поле userData объекта
+
         model.userData.obb = obb;
-        model.position.y = mas.vertices[Math.round(model.position.z) + Math.round(model.position.x)*N].y + 0.5;
-        objectList.push(model);
+        model.position.y = mas.vertices[Math.round(model.position.z) + Math.round(model.position.x)*N].y + 0.3;
+        
+        objectList.push(cube);
+        objectList1.push(model);
         scene.add(model);
     }
 }
