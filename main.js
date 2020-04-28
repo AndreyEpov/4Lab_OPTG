@@ -27,9 +27,8 @@ var objectList1=[];
 
 
 var models= new Map();
-
+var rayI = true;
 var selected = null;
-
 //var lmb = false;
 
 
@@ -130,12 +129,10 @@ function animate()
     {
         sphereBrush(brushDirection,delta);
     }
-    for (var i = 0; i < objectList.length; i++)
-    {
-        //var y = geometry.vertices[Math.round(z)+Math.round(x)*N].y;
-        //if(selected.userData!=)
-        objectList1[i].position.y = mas.vertices[Math.round(objectList1[i].position.z) + Math.round(objectList1[i].position.x)*N].y+0.3 ;
-    }
+        for (var i = 0; i < objectList.length; i++)
+        {
+            objectList1[i].position.y = mas.vertices[Math.round(objectList1[i].position.z) + Math.round(objectList1[i].position.x)*N].y+0.3 ;
+        }
     requestAnimationFrame( animate );
     render();
 }
@@ -282,7 +279,7 @@ function addSky()
             if ( intersects.length > 0 )
             {
                 //печать списка полей объекта
-            // console.log(intersects[0]);
+            // 
                 if(cursor3D!=null)
                 {
                 cursor3D.position.copy(intersects[0].point);
@@ -320,17 +317,21 @@ function addSky()
             
             if ( intersects.length > 0 )
             {
-                
+               
                 if(selected != null && lmb == true)
                 {
-               
-                    console.log("pos");
-                         
+                    rayI=true;
+                                            
                     selected.position.copy(intersects[0].point);
+
                     selected.userData.box.setFromObject(selected);
+
                     var pos = new THREE.Vector3();   
+           
                     selected.userData.box.getCenter(pos);
+                    
                     selected.userData.obb.position.copy(pos); 
+                  
                     selected.userData.cube.position.copy(pos);
                     
                     for (i=0;i < objectList.length;i++)
@@ -341,22 +342,35 @@ function addSky()
                             objectList[i].material.color = {r:1, g:1, b:0}
 
                             if(intersect(selected.userData,objectList[i].userData.model.userData)==true)
-                            {
-                              
+                            {     
                                 
-                               
-                            
-                                selected.userData.box.getCenter(lastPos);
-                                selected.userData.obb.position.copy(lastPos); 
-                                selected.userData.cube.position.copy(lastPos);
-                                objectList[i].material.color = {r:0, g:1, b:0}
+                                rayI = false;
+           
+                                selected.position.copy(lastPos);
+
+                                selected.userData.box.setFromObject(selected); 
+                                
+                                var pos1 = new THREE.Vector3();  
+
+                                selected.userData.box.getCenter(pos1);
+
+                                selected.userData.obb.position.copy(pos1); 
+                              
+                                selected.userData.cube.position.copy(pos1);
+
+                                objectList[i].material.color = {r:1, g:0, b:0}
                                 objectList[i].material.visible = true;
-                                lastPos=pos;
-                                console.log("lastpos");
+                                
+                                
                             }
 
                         }
                     }
+                    if ( rayI == true)
+                    {
+                        lastPos = intersects[0].point;
+                    }
+                    
                 }
             }
         }      
@@ -612,7 +626,7 @@ function addMesh(name)
         //структура хранится в поле userData объекта
 
         model.userData.obb = obb;
-        model.position.y = mas.vertices[Math.round(model.position.z) + Math.round(model.position.x)*N].y + 0.3;
+       // model.position.y = mas.vertices[Math.round(model.position.z) + Math.round(model.position.x)*N].y + 0.3;
         
         objectList.push(cube);
         objectList1.push(model);
