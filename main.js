@@ -34,6 +34,8 @@ var selected = null;
 
 var sprt = null;
 
+var loader =  new THREE.TextureLoader();
+
 var sprtBtn = [];
 
 init();
@@ -945,13 +947,31 @@ function addButtons( name )
     if (name == 'house')
         sprt = addSprite('pics/house.jpg', 'pics/house1.jpg', houseClick); 
     
-    if (name == 'grade')
+    /*if (name == 'grade')
         sprt = addSprite('pics/grade.png', 'pics/grade1.png', gradeClick); 
 
     if (name == 'palm')
         sprt = addSprite('pics/palm.png', 'pics/palm1.png', palmClick); 
-
+*/
     return sprt;
+}
+function hitButton(mPos, sprite)
+{
+    var pw = sprite.sprite.position.x;
+    var ph = sprite.sprite.position.y;
+    var sw = pw + sprite.sprite.scale.x;
+    var sh = ph - sprite.sprite.scale.y;
+
+    if (mPos.x > pw && mPos.x < sw){
+        if (mPos.y < ph && mPos.y > sh)
+        {
+            sprite.sprite.material = sprite.mat2;
+        }
+        else
+            sprite.sprite.material = sprite.mat1;
+    }
+    else
+        sprite.sprite.material = sprite.mat1;
 }
 function clickButton(mPos, sprite)
 {
