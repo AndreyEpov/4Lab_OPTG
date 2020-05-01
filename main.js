@@ -1,6 +1,6 @@
 
 var container;
-var camera, scene, renderer;
+var camera, scene, renderer,cameraOrtho,sceneOrtho;
 var cursor3D;
 var geometry,mas;
 var spotlight = new THREE.PointLight(0xaaff00,8,100,2);
@@ -26,23 +26,34 @@ var brVis = false;
 var objectList1=[];
 
 
+
 var models= new Map();
 var rayI = true;
 var selected = null;
 //var lmb = false;
 
+var sprt = null;
+
+var sprtBtn = [];
 
 init();
 animate();
  
 function init()
 {
-    
+    var width = window.innerWidth;
+    var height = window.innerHeight;
     container = document.getElementById( 'container' );
     scene = new THREE.Scene();
+    sceneOrtho = new THREE.Scene();
+    cameraOrtho = new THREE.OrthographicCamera( - width / 2, width / 2, height / 2, -height / 2, 1, 10 );
+    cameraOrtho.position.z = 10;
+
     camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 4000 );    
     camera.position.set(N/2, N, N*1.5); 
     camera.lookAt(new THREE.Vector3( N/2, 0.0, N/2));    
+
+
     
     renderer = new THREE.WebGLRenderer( { antialias: false } );
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -54,6 +65,9 @@ function init()
 
     container.appendChild( renderer.domElement );
     window.addEventListener( 'resize', onWindowResize, false );
+
+    renderer.autoClear = false;
+
     renderer.domElement.addEventListener('mousedown',onDocumentMouseDown,false);
     renderer.domElement.addEventListener('mouseup',onDocumentMouseUp,false);
     renderer.domElement.addEventListener('mousemove',onDocumentMouseMove,false);
@@ -103,22 +117,37 @@ function init()
     sphere = new THREE.Mesh( geometry, material );
     scene.add( sphere );
  */ 
-CreateTerrain();
-addSky();
-add3DCursor();
-addCirkle();
-circle.scale.set(radius,1,radius);
-GUI();
+    CreateTerrain();
+    addSky();
+    add3DCursor();
+    addCirkle();
+    circle.scale.set(radius,1,radius);
+    GUI();
 
-loadModel('models/house/', "Cyprys_House.obj", "Cyprys_House.mtl",1,'house');
-loadModel('models/grade/', "grade.obj", "grade.mtl",1,'grade');
+    sprtBtn.push( addButtons('house') );
+    //sprtBtn.push( addButtons('grade') );
+    //sprtBtn.push( addButtons('palm') );
+    loadModel('models/house/', "Cyprys_House.obj", "Cyprys_House.mtl",1,'house');
+    loadModel('models/grade/', "grade.obj", "grade.mtl",1,'grade');
 }
 
  
 function onWindowResize()
 {
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+ 
+
+    
+    cameraOrtho.left = -width / 2;
+    cameraOrtho.right = width / 2;
+    cameraOrtho.top = height / 2;
+    cameraOrtho.bottom = -height / 2;
+    cameraOrtho.updateProjectionMatrix();
+
     renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
@@ -138,7 +167,10 @@ function animate()
 }
 function render()
 {
+    renderer.clear();
     renderer.render( scene, camera );
+    renderer.clearDepth();
+    renderer.render( sceneOrtho, cameraOrtho);
 }
  
 function CreateTerrain()
@@ -262,6 +294,24 @@ function addSky()
     }
     function onDocumentMouseMove( event )
     {
+        var mpos = {};
+
+        mpos.x = event.clientX - (window.innerWidth / 2);
+        mpos.y = (window.innerHeight / 2) - event.clientY;
+        if (sprtBtn[0] != null)
+        {
+            hitButton(mpos, sprtBtn[0]);
+        }
+
+        if (sprtBtn[1] != null)
+        {
+            hitButton(mpos, sprtBtn[1]);
+        }
+
+        if (sprtBtn[2] != null)
+        {
+            hitButton(mpos, sprtBtn[2]);
+        }
         //определение позиции мыши
         mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
         mouse.y = -( event.clientY / window.innerHeight ) * 2 + 1;
@@ -429,7 +479,29 @@ function addSky()
         }else
         {    
            // console.log("f");        
-            lmb = false;   
+            lmb = false;  
+            var mpos = {};
+
+            mpos.x = event.clientX - (window.innerWidth / 2);
+            mpos.y = (window.innerHeight / 2) - event.clientY;
+    
+            if (sprtBtn[0] != null)
+            {
+                hitButton(mpos, sprtBtn[0]);
+                clickButton(mpos, sprtBtn[0]);
+            }
+    
+            if (sprtBtn[1] != null)
+            {
+                hitButton(mpos, sprtBtn[1]);
+                clickButton(mpos, sprtBtn[1]);
+            }
+    
+            if (sprtBtn[2] != null)
+            {
+                hitButton(mpos, sprtBtn[2]);
+                clickButton(mpos, sprtBtn[2]);
+            } 
         }
     }
     function sphereBrush(dir,delta)
@@ -809,4 +881,93 @@ function intersect(ob1, ob2)
         }
         // no separating axis exists, so the two OBB don't intersect
         return true;
+}
+function addSprite(name1, name2, Click)
+{
+    var type;
+
+    if (name1 == 'pics/house.jpg')
+        type = 'house';
+
+    if (name1 == 'pics/grade.png')
+        type = 'grade'
+
+    if (name1 == 'pics/palm.png')
+        type = 'palm'
+
+    //загрузка текстуры спрайта
+    var texture1 = loader.load(name1);
+    var material1 = new THREE.SpriteMaterial( { map: texture1 } );
+
+    var texture2 = loader.load(name2);
+    var material2 = new THREE.SpriteMaterial( { map: texture2 } );
+
+
+    //создание спрайта
+    sprite = new THREE.Sprite( material1);
+
+    //центр и размер спрайта
+    sprite.center.set( 0.0, 1.0 );
+    sprite.scale.set( 128, 100, 1 );
+
+    //позиция спрайта (центр экрана)
+    sprite.position.set( 0, 0, 1 );
+    sceneOrtho.add(sprite);    
+    updateHUDSprite(sprite);
+
+    var SSprite = {};
+    SSprite.sprite = sprite;
+    SSprite.mat1 = material1;
+    SSprite.mat2 = material2;
+    SSprite.click = Click;
+    SSprite.type = type;
+
+    if (type == "grade")
+        sprite.position.set(0, window.innerHeight / 2, 1);
+
+    if (type == "house")
+        sprite.position.set(-window.innerWidth / 2, window.innerHeight / 2, 1);
+
+    if (type == "palm")
+        sprite.position.set(-window.innerWidth / 4, window.innerHeight / 2, 1);
+
+    return SSprite;
+}
+function updateHUDSprite(sprite)
+{
+    var width = window.innerWidth / 2;
+    var height = window.innerHeight / 2;
+
+    sprite.position.set( -width, height, 1 );
+}
+function addButtons( name )
+{
+    if (name == 'house')
+        sprt = addSprite('pics/house.jpg', 'pics/house1.jpg', houseClick); 
+    
+    if (name == 'grade')
+        sprt = addSprite('pics/grade.png', 'pics/grade1.png', gradeClick); 
+
+    if (name == 'palm')
+        sprt = addSprite('pics/palm.png', 'pics/palm1.png', palmClick); 
+
+    return sprt;
+}
+function clickButton(mPos, sprite)
+{
+    var pw = sprite.sprite.position.x;
+    var ph = sprite.sprite.position.y;
+    var sw = pw + sprite.sprite.scale.x;
+    var sh = ph - sprite.sprite.scale.y;
+
+    if (mPos.x > pw && mPos.x < sw){
+        if (mPos.y < ph && mPos.y > sh)
+        {
+            sprite.click();
+        }
+    }
+}
+function houseClick()
+{
+    addMesh('house');
 }
