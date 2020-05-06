@@ -38,6 +38,15 @@ var loader =  new THREE.TextureLoader();
 
 var sprtBtn = [];
 
+var xwind = 0;
+var g = new THREE.Vector3(0, -1.8 , 0);
+var wind = new THREE.Vector3(0.0, 0.0, 0.0);
+var particles = [];
+var MAX_PARTICLES = 1000;
+var partVis = false;
+
+var rainMat = null;
+
 init();
 animate();
  
@@ -52,7 +61,7 @@ function init()
     cameraOrtho.position.z = 10;
 
     camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 4000 );    
-    camera.position.set(N/2, N, N*1.5); 
+    camera.position.set(N/2, N/2, N*1.5); 
     camera.lookAt(new THREE.Vector3( N/2, 0.0, N/2));    
 
 
@@ -96,7 +105,7 @@ function init()
     spotlight.shadow.camera.far = 4000;
     spotlight.shadow.camera.fov = 90;
     */
-   light.position.set(N, N, N/2 );
+   light.position.set(N*2, N*1.5, N*0.5 );
     // направление освещения
     light.target = new THREE.Object3D();
     light.target.position.set( 0, 5, 0 );
@@ -127,10 +136,11 @@ function init()
     GUI();
 
     sprtBtn.push( addButtons('house') );
-    //sprtBtn.push( addButtons('grade') );
+    sprtBtn.push( addButtons('grade') );
     //sprtBtn.push( addButtons('palm') );
     loadModel('models/house/', "Cyprys_House.obj", "Cyprys_House.mtl",1,'house');
     loadModel('models/grade/', "grade.obj", "grade.mtl",1,'grade');
+    rainMat = createSpriteMat('pics/drop.png');
 }
 
  
@@ -160,10 +170,12 @@ function animate()
     {
         sphereBrush(brushDirection,delta);
     }
-        for (var i = 0; i < objectList.length; i++)
-        {
-            objectList1[i].position.y = mas.vertices[Math.round(objectList1[i].position.z) + Math.round(objectList1[i].position.x)*N].y+0.3 ;
-        }
+    for (var i = 0; i < objectList.length; i++)
+    {
+        objectList1[i].position.y = mas.vertices[Math.round(objectList1[i].position.z) + Math.round(objectList1[i].position.x)*N].y+0.3 ;
+    }
+   
+    emitter(delta);
     requestAnimationFrame( animate );
     render();
 }
@@ -228,6 +240,7 @@ function CreateTerrain()
     var matMesh = new THREE.Mesh(mas, mat); 
     matMesh.receiveShadow = true;
     targetList.push(matMesh);
+   
     scene.add(matMesh);
 } 
 function addCirkle()
@@ -308,11 +321,6 @@ function addSky()
         if (sprtBtn[1] != null)
         {
             hitButton(mpos, sprtBtn[1]);
-        }
-
-        if (sprtBtn[2] != null)
-        {
-            hitButton(mpos, sprtBtn[2]);
         }
         //определение позиции мыши
         mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
@@ -431,6 +439,7 @@ function addSky()
     {
         if (brVis==true)
         {
+            if(selected!=null)
             selected.userData.cube.material.visible = false;
             //console.log(event.which);
             if (event.which == 1)
@@ -498,12 +507,7 @@ function addSky()
                 hitButton(mpos, sprtBtn[1]);
                 clickButton(mpos, sprtBtn[1]);
             }
-    
-            if (sprtBtn[2] != null)
-            {
-                hitButton(mpos, sprtBtn[2]);
-                clickButton(mpos, sprtBtn[2]);
-            } 
+
         }
     }
     function sphereBrush(dir,delta)
@@ -538,8 +542,9 @@ function GUI()
         //массив переменных, ассоциированных с интерфейсом
     var params =
     {
-        sx: 0, sy: 0, sz: 0,
+        sx: 0, sy: 0, sz: 0,direct: 0,
         brush: false,
+        rain: false,
         addHouse: function() { addMesh('house') },
         addGrade: function() { addMesh('grade') }
       //  del: function() { delMesh() }
@@ -547,6 +552,7 @@ function GUI()
   
     //создание вкладки
     var folder1 = gui.addFolder('Rotate');
+    var folder2 = gui.addFolder('Direct');
     //ассоциирование переменных отвечающих за масштабирование
     //в окне интерфейса они будут представлены в виде слайдера
     //минимальное значение - 1, максимальное – 100, шаг – 1
@@ -554,12 +560,22 @@ function GUI()
    // var meshSX = folder1.add( params, 'sx' ).min(1).max(100).step(1).listen();
 
     var meshSY = folder1.add( params, 'sy' ).min(1).max(630).step(1).listen();
+    var direct = folder2.add( params, 'direct' ).min(-1000).max(1000).step(1).listen();
     
   // var meshSZ = folder1.add( params, 'sz' ).min(1).max(100).step(1).listen();
     //при запуске программы папка будет открыта
     folder1.open();
+    folder2.open();
     //описание действий совершаемых при изменении ассоциированных значений
-   // meshSX.onChange(function(value) {…});
+    
+    direct.onChange(function(value) 
+    {
+        if(partVis == true)
+        {
+            var w1 = new THREE.Vector3(value/10,0,0);
+            wind.copy(w1);
+        }
+    });
    meshSY.onChange(function(value) 
     {
         if (selected != null && brVis==false)
@@ -592,6 +608,11 @@ function GUI()
         gui.add( params, 'addGrade' ).name( "add grade" );
         // gui.add( params, 'del' ).name( "delete" );
     }
+    var particlesVisible = gui.add( params, 'rain' ).name('rain').listen();
+    particlesVisible.onChange(function(value)
+    {
+        partVis = value;
+    });
     //при запуске программы интерфейс будет раскрыт
     gui.open();
  }
@@ -891,12 +912,8 @@ function addSprite(name1, name2, Click)
     if (name1 == 'pics/house.jpg')
         type = 'house';
 
-    if (name1 == 'pics/grade.png')
+    if (name1 == 'pics/Врата.jpg')
         type = 'grade'
-
-    if (name1 == 'pics/palm.png')
-        type = 'palm'
-
     //загрузка текстуры спрайта
     var texture1 = loader.load(name1);
     var material1 = new THREE.SpriteMaterial( { map: texture1 } );
@@ -925,14 +942,10 @@ function addSprite(name1, name2, Click)
     SSprite.type = type;
 
     if (type == "grade")
-        sprite.position.set(0, window.innerHeight / 2, 1);
+        sprite.position.set(-window.innerWidth / 2, window.innerHeight / 2.85, 1);
 
     if (type == "house")
         sprite.position.set(-window.innerWidth / 2, window.innerHeight / 2, 1);
-
-    if (type == "palm")
-        sprite.position.set(-window.innerWidth / 4, window.innerHeight / 2, 1);
-
     return SSprite;
 }
 function updateHUDSprite(sprite)
@@ -947,12 +960,8 @@ function addButtons( name )
     if (name == 'house')
         sprt = addSprite('pics/house.jpg', 'pics/house1.jpg', houseClick); 
     
-    /*if (name == 'grade')
-        sprt = addSprite('pics/grade.png', 'pics/grade1.png', gradeClick); 
-
-    if (name == 'palm')
-        sprt = addSprite('pics/palm.png', 'pics/palm1.png', palmClick); 
-*/
+    if (name == 'grade')
+        sprt = addSprite('pics/Врата.jpg', 'pics/Врата1.jpg', gradeClick); 
     return sprt;
 }
 function hitButton(mPos, sprite)
@@ -990,4 +999,81 @@ function clickButton(mPos, sprite)
 function houseClick()
 {
     addMesh('house');
+}
+function gradeClick()
+{
+    addMesh('grade');
+}
+function createSpriteMat(name)
+{
+    var texture = loader.load(name);
+    var material = new THREE.SpriteMaterial( {map: texture} );
+    return material;
+}
+function addDrop(mat,pos)
+{
+    sprite = new THREE.Sprite( mat );
+    sprite.center.set(0.5, 0.5);
+    sprite.scale.set(0.5, 1.5, 0.5);
+
+    sprite.position.copy( pos );
+
+    scene.add( sprite );
+
+    var SSprite = {};
+    SSprite.sprite = sprite;
+    SSprite.v = new THREE.Vector3(0, 0, 0);
+    SSprite.m = (Math.random()*0.1) + 0.01;
+
+    return SSprite;
+}
+
+function emitter(delta)
+{
+    //if (partVis == true)
+    {
+        if (particles.length < MAX_PARTICLES &&  partVis == true)
+        {
+            var x = Math.random()*N;
+            var z = Math.random()*N;
+
+            var pos = new THREE.Vector4(x, 70, z);
+            var particle = addDrop(rainMat,pos);
+            particles.push(particle);
+        }
+        for (var i = 0; i < particles.length; i++)
+        {
+            particles[i].v = particles[i].v.add(g); 
+            particles[i].sprite.position = particles[i].sprite.position.add(particles[i].v.multiplyScalar(delta * 10));
+        }
+        for (var i = 0; i < particles.length; i++)
+        {
+            //if(particles.length != 0)
+                   
+               if (particles[i].sprite.position.y < -5 && partVis == true)
+                {
+                    particles[i].sprite.position.y = 150;
+                    particles[i].sprite.position.x = Math.random()*N;
+                    particles[i].sprite.position.z = Math.random()*N;
+                }
+
+                    var v = new THREE.Vector3(0, 0, 0);
+                    var w = new THREE.Vector3(0, 0, 0);
+                    
+                    w.copy(wind);
+                    w.multiplyScalar(delta);
+                    
+                    v.copy(particles[i].v);
+                    v.add(w);
+                    
+                    particles[i].sprite.position.add(v);
+                    if(particles[i].sprite.position.y < -5 && partVis == false)
+                    {                
+                        //console.log(particles[i].sprite.position.y);
+                        scene.remove(particles[i].sprite);
+                        particles.splice(i,1);
+                    }
+            
+        }
+    }    
 }
