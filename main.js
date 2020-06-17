@@ -170,11 +170,10 @@ function animate()
     {
         sphereBrush(brushDirection,delta);
     }
-    for (var i = 0; i < objectList.length; i++)
+    for (var i = 0; i < objectList1.length; i++)
     {
         objectList1[i].position.y = mas.vertices[Math.round(objectList1[i].position.z) + Math.round(objectList1[i].position.x)*N].y+0.3 ;
     }
-   
     emitter(delta);
     requestAnimationFrame( animate );
     render();
